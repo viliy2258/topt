@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Програма нотаток</title>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-5CPzp5iwNHUxloFkDBf3J8gRlUpbGVc",
+            authDomain: "ton-not.firebaseapp.com",
+            databaseURL: "https://ton-not-default-rtdb.firebaseio.com",
+            projectId: "ton-not",
+            storageBucket: "ton-not.appspot.com",
+            messagingSenderId: "729333286761",
+            appId: "1:729333286761:web:741fdeb1572cc1908bdff8",
+            measurementId: "G-JKCWNWTLBT"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const auth = getAuth(app);
+
+        // Авторизація анонімного користувача
+        signInAnonymously(auth)
+            .catch((error) => {
+                console.error("Error signing in anonymously:", error);
+            });
+
+        // Відслідковування авторизації користувача
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const userId = user.uid;
+                document.getElementById('userId').innerText = `Ваш ID: ${userId}`;
+                loadNotes(userId);
+            } else {
+                document.getElementById('notes').innerText = 'Користувач не авторизований';
+            }
+        });
+
+        // Додавання нової нотатки в базу даних
+        function addNote() {
+            const noteText = document.getElementById('noteText').value;
+            if (noteText.trim() === "") {
+                alert("Нотатка не може бути порожньою");
+                return;
+            }
+
+            const userId = auth.currentUser.uid;
+            const notesRef = ref(database, 'users/' + userId + '/notes');
+            const newNoteRef = push(notesRef);
+            set(newNoteRef, {
+                text: noteText
+            });
+
+            document.getElementById('noteText').value = "";
+        }
+
+        // Завантаження нотаток з бази даних для поточного користувача
+        function loadNotes(userId) {
+            const notesRef = ref(database, 'users/' + userId + '/notes');
+            onValue(notesRef, (snapshot) => {
+                const notesContainer = document.getElementById('notes');
+                notesContainer.innerHTML = ""; // Очищаємо поточний список
+
+                snapshot.forEach((childSnapshot) => {
+                    const note = childSnapshot.val();
+                    const noteElement = document.createElement('li');
+                    noteElement.textContent = note.text;
+                    notesContainer.appendChild(noteElement);
+                });
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Нотатки користувача</h1>
+    <p id="userId">Завантаження ID користувача...</p>
+    <textarea id="noteText" placeholder="Введіть вашу нотатку тут..."></textarea><br>
+    <button onclick="addNote()">Додати нотатку</button>
+    <h2>Ваші нотатки:</h2>
+    <ul id="notes"></ul>
+</body>
+</html>
